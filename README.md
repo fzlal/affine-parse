@@ -11,6 +11,7 @@ Convert `.affine` backup files into structured Markdown output.
 ## Install
 
 ```bash
+git clone https://github.com/fzlal/affine-parse.git
 cd affine-parse
 bun install
 ```
@@ -18,13 +19,20 @@ bun install
 ## Usage
 
 ```bash
-bun run src/index.ts <path-to-.affine> <output-dir>
+bun run start <path-to-.affine> <output-dir>
 ```
 
 ### Example
 
 ```bash
-bun run src/index.ts ./workspace.affine ./output
+bun run start ./workspace.affine ./output
+```
+
+### Compile to Binary
+
+```bash
+bun run build
+./affine-parse ./workspace.affine ./output
 ```
 
 ## Output Structure
@@ -74,3 +82,7 @@ output/
 ## How It Works
 
 The `.affine` file is a SQLite database where document content is stored as Yjs CRDT binary data. This tool reads the SQLite file directly and decodes the Yjs binary — no need to run AFFiNE.
+
+## License
+
+MIT

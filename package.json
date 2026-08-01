@@ -1,13 +1,26 @@
 {
   "name": "affine-parse",
-  "module": "index.ts",
+  "version": "1.0.0",
+  "description": "Convert .affine backup files to structured Markdown",
+  "module": "src/index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "build": "bun build src/index.ts --compile --outfile affine-parse",
+    "dev": "bun --watch run src/index.ts",
+    "typecheck": "bun x tsc --noEmit"
+  },
+  "bin": {
+    "affine-parse": "./src/index.ts"
+  },
+  "keywords": ["affine", "markdown", "backup", "converter"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fzlal/affine-parse"
+  },
   "devDependencies": {
     "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
   },
   "dependencies": {
     "yjs": "^13.6.31"

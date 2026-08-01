@@ -11,6 +11,7 @@
 ## نصب
 
 ```bash
+git clone https://github.com/fzlal/affine-parse.git
 cd affine-parse
 bun install
 ```
@@ -18,13 +19,20 @@ bun install
 ## نحوه استفاده
 
 ```bash
-bun run src/index.ts <مسیر فایل .affine> <پوشه خروجی>
+bun run start <مسیر فایل .affine> <پوشه خروجی>
 ```
 
 ### مثال
 
 ```bash
-bun run src/index.ts ./workspace.affine ./output
+bun run start ./workspace.affine ./output
+```
+
+### کامپایل به فایل اجرایی
+
+```bash
+bun run build
+./affine-parse ./workspace.affine ./output
 ```
 
 ## ساختار خروجی
@@ -74,3 +82,7 @@ output/
 ## نحوه کار
 
 فایل `.affine` یک پایگاه‌داده SQLite است که محتوای اسناد به صورت Yjs CRDT binary ذخیره شده است. این ابزار فایل SQLite را مستقیماً می‌خواند و داده‌های Yjs binary را دیکد می‌کند — نیازی به اجرای AFFiNE نیست.
+
+## لایسنس
+
+MIT
