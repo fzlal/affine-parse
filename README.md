@@ -1,77 +1,76 @@
 # affine-parse
 
-ابزار تبدیل فایل‌های پشتیبان `.affine` به مجموعه فایل‌های Markdown ساختاریافته.
+[فارسی](README-fa.md)
 
-## پیش‌نیازها
+Convert `.affine` backup files into structured Markdown output.
 
-- [Bun](https://bun.sh) نسخه 1.0 یا بالاتر
+## Prerequisites
 
-## نصب
+- [Bun](https://bun.sh) v1.0+
+
+## Install
 
 ```bash
-cd /tmp/affine-parse
+cd affine-parse
 bun install
 ```
 
-## نحوه استفاده
+## Usage
 
 ```bash
-bun run src/index.ts <مسیر فایل .affine> <پوشه خروجی>
+bun run src/index.ts <path-to-.affine> <output-dir>
 ```
 
-### مثال
+### Example
 
 ```bash
 bun run src/index.ts ./workspace.affine ./output
 ```
 
-## ساختار خروجی
+## Output Structure
 
 ```
 output/
-└── <نام ورک‌اسپیس>/
-    ├── index.md                  # فهرست کل اسناد با لینک
-    ├── <نام پوشه>/               # پوشه‌های اصلی
-    │   ├── <زیرپوشه>/
-    │   │   └── <سند>.md
-    │   └── <سند>.md
-    ├── public/                   # اسناد بدون پوشه
-    │   └── <سند>.md
-    ├── templates/                # قالب‌ها
-    │   └── <سند>.md
-    └── trash/                    # اسناد حذف‌شده
-        └── <سند>.md
+└── <workspace-name>/
+    ├── index.md                  # Full index with links
+    ├── <folder>/                 # Original folders
+    │   ├── <subfolder>/
+    │   │   └── <doc>.md
+    │   └── <doc>.md
+    ├── public/                   # Unassigned documents
+    │   └── <doc>.md
+    ├── templates/                # Templates
+    │   └── <doc>.md
+    └── trash/                    # Trashed documents
+        └── <doc>.md
 ```
 
-### دسته‌بندی خروجی
+### Categories
 
-| پوشه | توضیح |
-|------|-------|
-| `<نام پوشه>/` | اسناد مرتب‌شده طبق ساختار پوشه‌های اصلی |
-| `public/` | اسنادی که در هیچ پوشه‌ای قرار ندارند |
-| `templates/` | قالب‌ها (شامل `isTemplate: true`) |
-| `trash/` | اسناد حذف‌شده (شامل `trash: true`) |
+| Folder | Description |
+|--------|-------------|
+| `<folder>/` | Documents organized by original folder structure |
+| `public/` | Documents not assigned to any folder |
+| `templates/` | Documents marked as templates (`isTemplate: true`) |
+| `trash/` | Deleted documents (`trash: true`) |
 
-## پشتیبانی
+## Supported Formats
 
-- **متن غنی**: bold, italic, strikethrough, inline code
-- **تیترها**: h1 تا h6
-- **لیست‌ها**: شماره‌دار، گلوله‌ای، todo list
-- **کد بلاک**: با زبان و کپشن
-- **تصاویر**: با لینک blob
-- **لینک‌ها**: داخلی و خارجی
-- **جدول**: ساده
-- **LaTeX**: ریاضی
-- **جداکننده**: خط افقی
-- **نقل‌قول**: blockquote
-- **بوکمارک**: لینک خارجی
-- **YouTube**: embed
-- **ساختار پوشه**: از `db$folders`
-- **قالب‌ها**: از `db$docProperties`
+- **Rich text**: bold, italic, strikethrough, inline code
+- **Headings**: h1 through h6
+- **Lists**: numbered, bulleted, todo lists
+- **Code blocks**: with language and caption
+- **Images**: blob links
+- **Links**: internal and external
+- **Tables**: basic markdown tables
+- **LaTeX**: math expressions
+- **Dividers**: horizontal rules
+- **Blockquotes**
+- **Bookmarks**: external links
+- **YouTube**: embedded iframes
+- **Folder structure**: from `db$folders`
+- **Templates**: from `db$docProperties`
 
-## نکات
+## How It Works
 
-- فایل `.affine` یک پایگاه‌داده SQLite است که داده‌ها به صورت Yjs CRDT binary ذخیره شده‌اند
-- این ابزار داده‌ها را مستقیماً از فایل SQLite می‌خواند و نیازی به اجرای AFFiNE ندارد
-- اسناد حذف‌شده (trash) در پوشه `trash/` جداگانه ذخیره می‌شوند
-- فایل `index.md` لینک‌های نسبی به تمام اسناد دارد
+The `.affine` file is a SQLite database where document content is stored as Yjs CRDT binary data. This tool reads the SQLite file directly and decodes the Yjs binary — no need to run AFFiNE.
