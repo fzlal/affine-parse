@@ -2,7 +2,7 @@
 
 [فارسی](README-fa.md)
 
-Convert `.affine` backup files into structured Markdown output.
+Convert `.affine` backup files to structured Markdown and back.
 
 ## Prerequisites
 
@@ -18,32 +18,41 @@ bun install
 
 ## Usage
 
+### Export: .affine → Markdown
+
 ```bash
-bun run start <path-to-.affine> <output-dir>
+bun run export <path-to-.affine> [output_dir]
 ```
 
-### Example
+```bash
+bun run export ./workspace.affine ./output
+```
+
+### Import: Markdown → .affine
 
 ```bash
-bun run start ./workspace.affine ./output
+bun run import <input_dir> <output.affine>
+```
+
+```bash
+bun run import ./my-docs ./workspace.affine
 ```
 
 ### Compile to Binary
 
 ```bash
 bun run build
-./affine-parse ./workspace.affine ./output
+./affine-parse export ./workspace.affine ./output
+./affine-parse import ./my-docs ./workspace.affine
 ```
 
-## Output Structure
+## Export Output Structure
 
 ```
 output/
 └── <workspace-name>/
     ├── index.md                  # Full index with links
     ├── <folder>/                 # Original folders
-    │   ├── <subfolder>/
-    │   │   └── <doc>.md
     │   └── <doc>.md
     ├── public/                   # Unassigned documents
     │   └── <doc>.md
@@ -53,35 +62,46 @@ output/
         └── <doc>.md
 ```
 
-### Categories
+## Import Input Structure
 
-| Folder | Description |
-|--------|-------------|
-| `<folder>/` | Documents organized by original folder structure |
-| `public/` | Documents not assigned to any folder |
-| `templates/` | Documents marked as templates (`isTemplate: true`) |
-| `trash/` | Deleted documents (`trash: true`) |
+```
+my-docs/
+├── page1.md                     # Each .md file becomes a page
+├── page2.md
+└── subfolder/
+    ├── page3.md                 # Nested folders are preserved as title prefix
+    └── image.png                # Images are imported as blobs
+```
 
 ## Supported Formats
 
-- **Rich text**: bold, italic, strikethrough, inline code
-- **Headings**: h1 through h6
-- **Lists**: numbered, bulleted, todo lists
-- **Code blocks**: with language and caption
-- **Images**: blob links
-- **Links**: internal and external
-- **Tables**: basic markdown tables
-- **LaTeX**: math expressions
-- **Dividers**: horizontal rules
-- **Blockquotes**
-- **Bookmarks**: external links
-- **YouTube**: embedded iframes
-- **Folder structure**: from `db$folders`
-- **Templates**: from `db$docProperties`
+| Feature | Export | Import |
+|---------|--------|--------|
+| Headings (h1-h6) | ✅ | ✅ |
+| Bold, Italic, Strike | ✅ | ✅ |
+| Code blocks | ✅ | ✅ |
+| Bullet lists | ✅ | ✅ |
+| Numbered lists | ✅ | ✅ |
+| Todo lists | ✅ | ✅ |
+| Blockquotes | ✅ | ✅ |
+| Dividers | ✅ | ✅ |
+| Images (blob) | ✅ | ✅ |
+| Links | ✅ | ✅ |
+| Tables | ✅ | ✅ |
+| LaTeX | ✅ | ✅ |
+| Bookmarks | ✅ | ✅ |
+| Folder structure | ✅ | via title prefix |
+| Templates | ✅ | via folder name |
 
 ## How It Works
 
-The `.affine` file is a SQLite database where document content is stored as Yjs CRDT binary data. This tool reads the SQLite file directly and decodes the Yjs binary — no need to run AFFiNE.
+### Export
+
+The `.affine` file is a SQLite database with Yjs CRDT binary data. This tool reads the SQLite file directly and decodes the Yjs binary — no need to run AFFiNE.
+
+### Import
+
+Markdown files are parsed with [remark](https://github.com/remarkjs/remark) into an AST, then converted to AFFiNE block types and serialized as Yjs binary. The output `.affine` file follows the v2 schema and can be imported into AFFiNE.
 
 ## License
 

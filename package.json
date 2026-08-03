@@ -7,6 +7,8 @@
   "private": true,
   "scripts": {
     "start": "bun run src/index.ts",
+    "export": "bun run src/index.ts export",
+    "import": "bun run src/index.ts import",
     "build": "bun build src/index.ts --compile --outfile affine-parse",
     "dev": "bun --watch run src/index.ts",
     "typecheck": "bun x tsc --noEmit"
@@ -23,6 +25,14 @@
     "@types/bun": "latest"
   },
   "dependencies": {
+    "mdast-util-from-markdown": "^2.0.3",
+    "mdast-util-gfm": "^3.1.0",
+    "mdast-util-to-markdown": "^2.1.2",
+    "micromark-extension-gfm": "^3.0.0",
+    "remark": "^15.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
     "yjs": "^13.6.31"
   }
 }

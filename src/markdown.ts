@@ -122,13 +122,12 @@ export function renderBlock(block: ParsedBlock, indent: string = "", listIndex: 
       return inner(`[](Bookmark,${block.url || ""})`);
 
     case "affine:embed-youtube":
-      return inner(
-        `<iframe type="text/html" width="100%" height="410" src="https://www.youtube.com/embed/${block.videoId || ""}"></iframe>`
-      );
+      return "";
 
     case "affine:embed-linked-doc":
+      return "";
     case "affine:embed-synced-doc":
-      return inner(`[${block.caption || "link"}](doc://${block.pageId || ""})`);
+      return "";
 
     case "affine:latex":
       return inner(`$$${block.latex || block.content}$$`);

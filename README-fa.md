@@ -2,7 +2,7 @@
 
 [English](README.md)
 
-تبدیل فایل‌های پشتیبان `.affine` به مجموعه فایل‌های Markdown ساختاریافته.
+تبدیل فایل‌های پشتیبان `.affine` به Markdown و بالعکس.
 
 ## پیش‌نیازها
 
@@ -18,21 +18,32 @@ bun install
 
 ## نحوه استفاده
 
+### خروجی: .affine → Markdown
+
 ```bash
-bun run start <مسیر فایل .affine> <پوشه خروجی>
+bun run export <مسیر فایل .affine> [پوشه خروجی]
 ```
 
-### مثال
+```bash
+bun run export ./workspace.affine ./output
+```
+
+### ورودی: Markdown → .affine
 
 ```bash
-bun run start ./workspace.affine ./output
+bun run import <پوشه ورودی> <مسیر خروجی.affine>
+```
+
+```bash
+bun run import ./my-docs ./workspace.affine
 ```
 
 ### کامپایل به فایل اجرایی
 
 ```bash
 bun run build
-./affine-parse ./workspace.affine ./output
+./affine-parse export ./workspace.affine ./output
+./affine-parse import ./my-docs ./workspace.affine
 ```
 
 ## ساختار خروجی
@@ -40,10 +51,8 @@ bun run build
 ```
 output/
 └── <نام ورک‌اسپیس>/
-    ├── index.md                  # فهرست کل اسناد با لینک
+    ├── index.md                  # فهرست کل اسناد
     ├── <نام پوشه>/               # پوشه‌های اصلی
-    │   ├── <زیرپوشه>/
-    │   │   └── <سند>.md
     │   └── <سند>.md
     ├── public/                   # اسناد بدون پوشه
     │   └── <سند>.md
@@ -53,35 +62,46 @@ output/
         └── <سند>.md
 ```
 
-### دسته‌بندی خروجی
+## ساختار ورودی
 
-| پوشه | توضیح |
-|------|-------|
-| `<نام پوشه>/` | اسناد مرتب‌شده طبق ساختار پوشه‌های اصلی |
-| `public/` | اسنادی که در هیچ پوشه‌ای قرار ندارند |
-| `templates/` | قالب‌ها (شامل `isTemplate: true`) |
-| `trash/` | اسناد حذف‌شده (شامل `trash: true`) |
+```
+my-docs/
+├── page1.md                     # هر فایل .md یک صفحه می‌شود
+├── page2.md
+└── subfolder/
+    ├── page3.md                 # پوشه‌ها به عنوان پیشوند عنوان
+    └── image.png                # عکس‌ها به عنوان blob وارد می‌شوند
+```
 
 ## پشتیبانی
 
-- **متن غنی**: bold, italic, strikethrough, inline code
-- **تیترها**: h1 تا h6
-- **لیست‌ها**: شماره‌دار، گلوله‌ای، todo list
-- **کد بلاک**: با زبان و کپشن
-- **تصاویر**: با لینک blob
-- **لینک‌ها**: داخلی و خارجی
-- **جدول**: ساده
-- **LaTeX**: ریاضی
-- **جداکننده**: خط افقی
-- **نقل‌قول**: blockquote
-- **بوکمارک**: لینک خارجی
-- **YouTube**: embed
-- **ساختار پوشه**: از `db$folders`
-- **قالب‌ها**: از `db$docProperties`
+| ویژگی | خروجی | ورودی |
+|-------|-------|-------|
+| تیترها (h1-h6) | ✅ | ✅ |
+| bold, italic, strike | ✅ | ✅ |
+| کد بلاک | ✅ | ✅ |
+| لیست گلوله‌ای | ✅ | ✅ |
+| لیست شماره‌دار | ✅ | ✅ |
+| todo list | ✅ | ✅ |
+| نقل‌قول | ✅ | ✅ |
+| جداکننده | ✅ | ✅ |
+| تصاویر (blob) | ✅ | ✅ |
+| لینک‌ها | ✅ | ✅ |
+| جدول | ✅ | ✅ |
+| LaTeX | ✅ | ✅ |
+| بوکمارک | ✅ | ✅ |
+| ساختار پوشه | ✅ | از طریق پیشوند عنوان |
+| قالب‌ها | ✅ | از نام پوشه |
 
 ## نحوه کار
 
-فایل `.affine` یک پایگاه‌داده SQLite است که محتوای اسناد به صورت Yjs CRDT binary ذخیره شده است. این ابزار فایل SQLite را مستقیماً می‌خواند و داده‌های Yjs binary را دیکد می‌کند — نیازی به اجرای AFFiNE نیست.
+### خروجی
+
+فایل `.affine` یک پایگاه‌داده SQLite با داده‌های Yjs CRDT binary است. این ابزار فایل SQLite را مستقیماً می‌خواند — نیازی به اجرای AFFiNE نیست.
+
+### ورودی
+
+فایل‌های Markdown با [remark](https://github.com/remarkjs/remark) پارس شده و به بلاک‌های AFFiNE تبدیل می‌شوند. فایل خروجی فرمت v2 را رعایت کرده و قابل وارد کردن در AFFiNE است.
 
 ## لایسنس
 

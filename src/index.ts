@@ -13,18 +13,33 @@ import {
   sanitizePath,
   type FolderNode,
 } from "./folder-structure";
-import { mkdirSync, writeFileSync } from "fs";
-import { join, dirname } from "path";
+import {
+  createAffineDb,
+  setMeta,
+  insertSnapshot,
+  insertUpdate,
+  vacuumDb,
+} from "./sqlite-schema";
+import { parseMarkdown } from "./md-parser";
+import { buildPageYDoc, buildRootYDoc } from "./ydoc-builder";
+import { scanImages, loadBlobsToDb } from "./blob-handler";
+import { mkdirSync, writeFileSync, readdirSync, readFileSync, statSync } from "fs";
+import { join, dirname, extname, relative } from "path";
 
 function usage() {
-  console.log(`Usage: bun run src/index.ts <input.affine> [output_dir]
+  console.log(`
+Usage:
+  bun run src/index.ts export <input.affine> [output_dir]
+  bun run src/index.ts import <input_dir> <output.affine>
 
-Options:
-  input.affine    Path to .affine backup file
-  output_dir      Output directory (default: ./output)
+Commands:
+  export    Convert .affine backup to Markdown files
+  import    Convert Markdown folder to .affine backup
 
-Example:
-  bun run src/index.ts ./workspace.affine ./output`);
+Examples:
+  bun run src/index.ts export ./workspace.affine ./output
+  bun run src/index.ts import ./my-docs ./output.affine
+`);
   process.exit(1);
 }
 
@@ -44,10 +59,11 @@ function readTemplateIds(db: AffineDb): Set<string> {
   return ids;
 }
 
-async function main() {
-  const args = process.argv.slice(2);
-  if (args.length < 1) usage();
+// ──────────────────────────────────────────
+// EXPORT: .affine → Markdown
+// ──────────────────────────────────────────
 
+async function cmdExport(args: string[]) {
   const inputFile = args[0];
   const outputDir = args[1] || "./output";
 
@@ -93,13 +109,6 @@ async function main() {
 
   let converted = 0;
   let failed = 0;
-  const trashIds = new Set<string>();
-  const pageMap = new Map<string, PageMetaEntry>();
-
-  for (const page of pages) {
-    pageMap.set(page.id, page);
-    if (page.trash) trashIds.add(page.id);
-  }
 
   for (const page of pages) {
     const pageId = page.id;
@@ -161,6 +170,112 @@ async function main() {
   db.close();
   console.log(`\nDone: ${converted} converted, ${failed} skipped`);
 }
+
+// ──────────────────────────────────────────
+// IMPORT: Markdown → .affine
+// ──────────────────────────────────────────
+
+function collectMarkdownFiles(inputDir: string): string[] {
+  const files: string[] = [];
+
+  function walk(dir: string) {
+    let entries: string[];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry === "index.md" && dir === inputDir) continue;
+      const fullPath = join(dir, entry);
+      try {
+        const stat = statSync(fullPath);
+        if (stat.isDirectory()) {
+          walk(fullPath);
+        } else if (extname(entry) === ".md") {
+          files.push(fullPath);
+        }
+      } catch {}
+    }
+  }
+
+  walk(inputDir);
+  return files;
+}
+
+function deriveTitle(filePath: string, inputDir: string): string {
+  const rel = relative(inputDir, filePath);
+  const name = rel.replace(/\.md$/, "").replace(/[/\\]/g, " / ");
+  return name;
+}
+
+async function cmdImport(args: string[]) {
+  const inputDir = args[0];
+  const outputPath = args[1] || "./output.affine";
+
+  console.log(`Input dir: ${inputDir}`);
+  console.log(`Output: ${outputPath}`);
+
+  const mdFiles = collectMarkdownFiles(inputDir);
+  console.log(`Markdown files: ${mdFiles.length}`);
+
+  if (mdFiles.length === 0) {
+    console.error("No markdown files found");
+    process.exit(1);
+  }
+
+  const workspaceId = "ws-" + Date.now().toString(36);
+  const dirName = inputDir.split("/").pop() || "workspace";
+  const workspaceName = dirName;
+
+  const tmpDbPath = outputPath + ".tmp";
+  const db = createAffineDb(tmpDbPath);
+  setMeta(db, workspaceId);
+
+  const pages: { id: string; title: string }[] = [];
+
+  console.log("Creating documents...");
+
+  for (const mdFile of mdFiles) {
+    const content = readFileSync(mdFile, "utf-8");
+    const title = deriveTitle(mdFile, inputDir);
+    const pageId = "page-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+
+    const result = parseMarkdown(content, title);
+    const pageBinary = buildPageYDoc(pageId, result.title, result.blocks);
+
+    insertSnapshot(db, pageId, pageBinary);
+    insertUpdate(db, pageId, pageBinary);
+
+    pages.push({ id: pageId, title: result.title });
+    console.log(`  OK: ${result.title} (${result.blocks.length} blocks)`);
+  }
+
+  console.log("Creating workspace root...");
+  const rootBinary = buildRootYDoc(workspaceId, workspaceName, pages);
+  insertSnapshot(db, workspaceId, rootBinary);
+  insertUpdate(db, workspaceId, rootBinary);
+
+  console.log("Loading blobs...");
+  const images = scanImages(inputDir);
+  if (images.length > 0) {
+    loadBlobsToDb(db, images);
+    console.log(`  Blobs: ${images.length}`);
+  }
+
+  console.log("Vacuuming...");
+  vacuumDb(db, outputPath);
+  db.close();
+
+  const { unlinkSync } = await import("fs");
+  try { unlinkSync(tmpDbPath); } catch {}
+
+  console.log(`\nDone: ${pages.length} pages -> ${outputPath}`);
+}
+
+// ──────────────────────────────────────────
+// Shared helpers
+// ──────────────────────────────────────────
 
 function buildFolderPath(allFolders: FolderNode[], targetId: string): string[] {
   const path: string[] = [];
@@ -263,6 +378,30 @@ function renderFolderIndex(
       renderFolderIndex(f.children, folderPath, lines, titleMap, templateIds);
     }
     lines.push("");
+  }
+}
+
+// ──────────────────────────────────────────
+// Main
+// ──────────────────────────────────────────
+
+async function main() {
+  const args = process.argv.slice(2);
+  if (args.length < 1) usage();
+
+  const command = args[0];
+  const cmdArgs = args.slice(1);
+
+  switch (command) {
+    case "export":
+      await cmdExport(cmdArgs);
+      break;
+    case "import":
+      await cmdImport(cmdArgs);
+      break;
+    default:
+      console.error(`Unknown command: ${command}`);
+      usage();
   }
 }
 
