@@ -30,15 +30,19 @@ function usage() {
   console.log(`
 Usage:
   bun run src/index.ts export <input.affine> [output_dir]
-  bun run src/index.ts import <input_dir> <output.affine>
+  bun run src/index.ts import <input_dir> <output.affine> [--name <workspace_name>]
 
 Commands:
   export    Convert .affine backup to Markdown files
   import    Convert Markdown folder to .affine backup
 
+Options:
+  --name    Set workspace name (default: input folder name)
+
 Examples:
   bun run src/index.ts export ./workspace.affine ./output
   bun run src/index.ts import ./my-docs ./output.affine
+  bun run src/index.ts import ./my-docs ./output.affine --name "My Notes"
 `);
   process.exit(1);
 }
@@ -262,8 +266,21 @@ async function cmdImport(args: string[]) {
   const inputDir = args[0];
   const outputPath = args[1] || "./output.affine";
 
+  let workspaceName = "";
+  for (let i = 2; i < args.length; i++) {
+    if (args[i] === "--name" && args[i + 1]) {
+      workspaceName = args[i + 1];
+      i++;
+    }
+  }
+
+  if (!workspaceName) {
+    workspaceName = inputDir.split("/").pop() || "workspace";
+  }
+
   console.log(`Input dir: ${inputDir}`);
   console.log(`Output: ${outputPath}`);
+  console.log(`Workspace: ${workspaceName}`);
 
   const mdFiles = collectMarkdownFiles(inputDir);
   console.log(`Markdown files: ${mdFiles.length}`);
@@ -274,8 +291,6 @@ async function cmdImport(args: string[]) {
   }
 
   const workspaceId = "ws-" + Date.now().toString(36);
-  const dirName = inputDir.split("/").pop() || "workspace";
-  const workspaceName = dirName;
 
   const tmpDbPath = outputPath + ".tmp";
   const db = createAffineDb(tmpDbPath);
