@@ -21,7 +21,7 @@ import {
   vacuumDb,
 } from "./sqlite-schema";
 import { parseMarkdown } from "./md-parser";
-import { buildPageYDoc, buildRootYDoc } from "./ydoc-builder";
+import { buildPageYDoc, buildRootYDoc, buildFoldersFromStructure, buildDocPropertiesDoc } from "./ydoc-builder";
 import { scanImages, loadBlobsToDb } from "./blob-handler";
 import { mkdirSync, writeFileSync, readdirSync, readFileSync, statSync } from "fs";
 import { join, dirname, extname, relative } from "path";
@@ -175,8 +175,15 @@ async function cmdExport(args: string[]) {
 // IMPORT: Markdown → .affine
 // ──────────────────────────────────────────
 
-function collectMarkdownFiles(inputDir: string): string[] {
-  const files: string[] = [];
+interface FileEntry {
+  filePath: string;
+  relPath: string;
+  folderParts: string[];
+  fileName: string;
+}
+
+function collectMarkdownFiles(inputDir: string): FileEntry[] {
+  const files: FileEntry[] = [];
 
   function walk(dir: string) {
     let entries: string[];
@@ -193,7 +200,14 @@ function collectMarkdownFiles(inputDir: string): string[] {
         if (stat.isDirectory()) {
           walk(fullPath);
         } else if (extname(entry) === ".md") {
-          files.push(fullPath);
+          const rel = relative(inputDir, fullPath);
+          const parts = rel.split("/").slice(0, -1);
+          files.push({
+            filePath: fullPath,
+            relPath: rel,
+            folderParts: parts,
+            fileName: entry.replace(/\.md$/, ""),
+          });
         }
       } catch {}
     }
@@ -207,6 +221,41 @@ function deriveTitle(filePath: string, inputDir: string): string {
   const rel = relative(inputDir, filePath);
   const name = rel.replace(/\.md$/, "").replace(/[/\\]/g, " / ");
   return name;
+}
+
+function buildFolderMap(files: FileEntry[]): {
+  folders: Map<string, { name: string; parentId: string | null }>;
+  docLinks: { parentId: string | null; docId: string; index: string }[];
+} {
+  const folders = new Map<string, { name: string; parentId: string | null }>();
+  const docLinks: { parentId: string | null; docId: string; index: string }[] = [];
+  const folderPaths = new Map<string, string>();
+  let idx = 0;
+
+  for (const file of files) {
+    let currentParent: string | null = null;
+
+    for (let i = 0; i < file.folderParts.length; i++) {
+      const part = file.folderParts[i];
+      const pathKey = file.folderParts.slice(0, i + 1).join("/");
+
+      if (!folderPaths.has(pathKey)) {
+        const folderId = "folder-" + pathKey.replace(/\//g, "-").replace(/[^a-zA-Z0-9-]/g, "_");
+        folderPaths.set(pathKey, folderId);
+        folders.set(folderId, { name: part, parentId: currentParent });
+      }
+
+      currentParent = folderPaths.get(pathKey)!;
+    }
+
+    docLinks.push({
+      parentId: currentParent,
+      docId: "", // will be set later
+      index: "a" + String(idx++).padStart(6, "0"),
+    });
+  }
+
+  return { folders, docLinks };
 }
 
 async function cmdImport(args: string[]) {
@@ -232,13 +281,17 @@ async function cmdImport(args: string[]) {
   const db = createAffineDb(tmpDbPath);
   setMeta(db, workspaceId);
 
-  const pages: { id: string; title: string }[] = [];
+  const pages: { id: string; title: string; trash?: boolean }[] = [];
+  const properties: { id: string; isTemplate?: boolean }[] = [];
+
+  const { folders, docLinks } = buildFolderMap(mdFiles);
 
   console.log("Creating documents...");
 
-  for (const mdFile of mdFiles) {
-    const content = readFileSync(mdFile, "utf-8");
-    const title = deriveTitle(mdFile, inputDir);
+  for (let i = 0; i < mdFiles.length; i++) {
+    const mdFile = mdFiles[i];
+    const content = readFileSync(mdFile.filePath, "utf-8");
+    const title = deriveTitle(mdFile.filePath, inputDir);
     const pageId = "page-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
 
     const result = parseMarkdown(content, title);
@@ -247,7 +300,19 @@ async function cmdImport(args: string[]) {
     insertSnapshot(db, pageId, pageBinary);
     insertUpdate(db, pageId, pageBinary);
 
-    pages.push({ id: pageId, title: result.title });
+    const isTrash = mdFile.folderParts[0] === "trash";
+    const isTemplate = mdFile.folderParts[0] === "templates";
+
+    if (docLinks[i]) {
+      docLinks[i].docId = pageId;
+    }
+
+    pages.push({ id: pageId, title: result.title, trash: isTrash || undefined });
+
+    if (isTemplate) {
+      properties.push({ id: pageId, isTemplate: true });
+    }
+
     console.log(`  OK: ${result.title} (${result.blocks.length} blocks)`);
   }
 
@@ -255,6 +320,18 @@ async function cmdImport(args: string[]) {
   const rootBinary = buildRootYDoc(workspaceId, workspaceName, pages);
   insertSnapshot(db, workspaceId, rootBinary);
   insertUpdate(db, workspaceId, rootBinary);
+
+  console.log("Creating folders...");
+  const foldersBinary = buildFoldersFromStructure(folders, docLinks);
+  insertSnapshot(db, "db$folders", foldersBinary);
+  insertUpdate(db, "db$folders", foldersBinary);
+
+  if (properties.length > 0) {
+    console.log("Creating doc properties...");
+    const propsBinary = buildDocPropertiesDoc(properties);
+    insertSnapshot(db, "db$docProperties", propsBinary);
+    insertUpdate(db, "db$docProperties", propsBinary);
+  }
 
   console.log("Loading blobs...");
   const images = scanImages(inputDir);
