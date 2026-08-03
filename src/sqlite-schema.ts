@@ -1,6 +1,15 @@
 import { Database } from "bun:sqlite";
 
 const SCHEMA_SQL = `
+CREATE TABLE IF NOT EXISTS "_sqlx_migrations" (
+  "version" BIGINT PRIMARY KEY NOT NULL,
+  "description" TEXT NOT NULL,
+  "installed_on" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "success" BOOLEAN NOT NULL,
+  "checksum" BLOB NOT NULL,
+  "execution_time" BIGINT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS "meta" (
   "space_id" VARCHAR PRIMARY KEY NOT NULL
 );
@@ -64,10 +73,58 @@ CREATE TABLE IF NOT EXISTS "indexer_sync" (
 );
 `;
 
+function hexToBuffer(hex: string): Buffer {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return Buffer.from(bytes);
+}
+
+function insertMigrations(db: Database): void {
+  const now = new Date().toISOString();
+  const migrations = [
+    {
+      version: 1,
+      description: "init_v2",
+      checksum: "a1f0a1496ba1d1ff1689fc234514b13e7501ce5a3891b5943a75300b20e68444444ae71a1a80f40e46ccee2fc9e2af1a",
+      execution_time: 3295523,
+    },
+    {
+      version: 2,
+      description: "add_blob_sync",
+      checksum: "c40244fec04822d74db419bead8486db435bb52d1f0214e4ddcc8928f4444475c7be8f96cee4c4383fd21b866fffd630",
+      execution_time: 3270677,
+    },
+    {
+      version: 3,
+      description: "add_idx_snapshots",
+      checksum: "c13e51745e6f2d3e49f01fc82df68e88e91feabfa0a28507d658bb85b4c5cb81354ac8b23eb1038b175b1ae66311980a",
+      execution_time: 2686673,
+    },
+    {
+      version: 4,
+      description: "add_indexer_sync",
+      checksum: "eeb9b2d07c3827f326feaed6651f587f177c2312c701d72f321c2d1a132bcd962fc914b39b12a34694003033bf29882b",
+      execution_time: 3117936,
+    },
+  ];
+
+  for (const m of migrations) {
+    const checksumBuf = hexToBuffer(m.checksum.replace(/\s/g, ""));
+    db.run(
+      `INSERT OR REPLACE INTO "_sqlx_migrations" (version, description, installed_on, success, checksum, execution_time)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [m.version, m.description, now, 1, checksumBuf, m.execution_time]
+    );
+  }
+}
+
 export function createAffineDb(filePath: string): Database {
   const db = new Database(filePath);
   db.exec("PRAGMA journal_mode=WAL");
   db.exec(SCHEMA_SQL);
+  insertMigrations(db);
   return db;
 }
 
