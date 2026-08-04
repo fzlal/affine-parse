@@ -14,7 +14,8 @@ export function buildPageYDoc(
       const yBlock = new Y.Map<any>();
       yBlock.set("sys:id", block.id);
       yBlock.set("sys:flavour", block.flavour);
-      yBlock.set("sys:version", 2);
+      const version = block.flavour === "affine:page" ? 2 : 1;
+      yBlock.set("sys:version", version);
 
       const childrenArr = new Y.Array<string>();
       childrenArr.insert(0, block.children);
