@@ -14,8 +14,8 @@ export function buildPageYDoc(
   pageId: string,
   title: string,
   blocks: AffineBlockDef[]
-): Y.Doc {
-  const doc = new Y.Doc({ guid: pageId });
+): Uint8Array {
+  const doc = new Y.Doc();
   const blocksMap = doc.getMap("blocks");
 
   for (const block of blocks) {
@@ -133,23 +133,24 @@ export function buildPageYDoc(
     blocksMap.set(block.id, yBlock);
   }
 
-  return doc;
+  const binary = Y.encodeStateAsUpdate(doc);
+  doc.destroy();
+  return binary;
 }
 
 export interface PageEntry {
   id: string;
   title: string;
   trash?: boolean;
-  subdoc?: Y.Doc;
 }
 
 export function buildRootYDoc(
   workspaceName: string,
   pages: PageEntry[]
-): Y.Doc {
-  const rootDoc = new Y.Doc();
+): Uint8Array {
+  const doc = new Y.Doc();
 
-  const meta = rootDoc.getMap("meta");
+  const meta = doc.getMap("meta");
   meta.set("name", workspaceName);
 
   const pagesArr = new Y.Array<Y.Map<any>>();
@@ -168,22 +169,9 @@ export function buildRootYDoc(
   }
   meta.set("pages", pagesArr);
 
-  const spaces = rootDoc.getMap("spaces");
-  for (const page of pages) {
-    if (page.subdoc) {
-      spaces.set(page.id, page.subdoc);
-    }
-  }
-
-  return rootDoc;
-}
-
-export interface FolderEntry {
-  id: string;
-  parentId: string | null;
-  type: "folder" | "doc" | "tag" | "collection";
-  data: string;
-  index: string;
+  const binary = Y.encodeStateAsUpdate(doc);
+  doc.destroy();
+  return binary;
 }
 
 export function buildFoldersFromStructure(

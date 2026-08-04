@@ -307,7 +307,7 @@ async function cmdImport(args: string[]) {
   const db = createAffineDb(tmpDbPath);
   setMeta(db, workspaceId);
 
-  const pages: { id: string; title: string; trash?: boolean; subdoc?: Y.Doc }[] = [];
+  const pages: { id: string; title: string; trash?: boolean }[] = [];
   const properties: { id: string; isTemplate?: boolean }[] = [];
 
   const { folders, docLinks } = buildFolderMap(mdFiles);
@@ -321,7 +321,10 @@ async function cmdImport(args: string[]) {
     const pageId = "page-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
 
     const result = parseMarkdown(content, title);
-    const subdoc = buildPageYDoc(pageId, result.title, result.blocks);
+    const pageBinary = buildPageYDoc(pageId, result.title, result.blocks);
+
+    insertSnapshot(db, pageId, pageBinary);
+    insertUpdate(db, pageId, pageBinary);
 
     const isTrash = mdFile.folderParts[0] === "trash";
     const isTemplate = mdFile.folderParts[0] === "templates";
@@ -330,7 +333,7 @@ async function cmdImport(args: string[]) {
       docLinks[i].docId = pageId;
     }
 
-    pages.push({ id: pageId, title: result.title, trash: isTrash || undefined, subdoc });
+    pages.push({ id: pageId, title: result.title, trash: isTrash || undefined });
 
     if (isTemplate) {
       properties.push({ id: pageId, isTemplate: true });
@@ -340,15 +343,9 @@ async function cmdImport(args: string[]) {
   }
 
   console.log("Creating workspace root...");
-  const rootDoc = buildRootYDoc(workspaceName, pages);
-  const rootBinary = Y.encodeStateAsUpdate(rootDoc);
+  const rootBinary = buildRootYDoc(workspaceName, pages);
   insertSnapshot(db, workspaceId, rootBinary);
   insertUpdate(db, workspaceId, rootBinary);
-  rootDoc.destroy();
-
-  for (const page of pages) {
-    if (page.subdoc) page.subdoc.destroy();
-  }
 
   console.log("Creating folders...");
   const foldersBinary = buildFoldersFromStructure(folders, docLinks);
