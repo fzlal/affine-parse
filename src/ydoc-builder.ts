@@ -89,6 +89,35 @@ export function buildPageYDoc(
         yBlock.set("prop:displayMode", String(block.props.displayMode));
       }
 
+      // Required default props per block type
+      if (block.flavour === "affine:note") {
+        if (!yBlock.has("prop:xywh")) yBlock.set("prop:xywh", "[0,0,498,92]");
+        if (!yBlock.has("prop:index")) yBlock.set("prop:index", "a0");
+        if (!yBlock.has("prop:hidden")) yBlock.set("prop:hidden", false);
+        if (!yBlock.has("prop:background")) yBlock.set("prop:background", { dark: "#1E1E1E", light: "#FFFFFF" });
+        if (!yBlock.has("prop:displayMode")) yBlock.set("prop:displayMode", "both");
+        if (!yBlock.has("prop:edgeless")) {
+          yBlock.set("prop:edgeless", {
+            style: { borderRadius: 8, borderSize: 4, borderStyle: "none", shadowType: "--affine-note-shadow-box" },
+          });
+        }
+      }
+
+      if (block.flavour === "affine:paragraph" || block.flavour === "affine:list") {
+        if (!yBlock.has("prop:collapsed")) yBlock.set("prop:collapsed", false);
+      }
+
+      if (block.flavour === "affine:list") {
+        if (!yBlock.has("prop:order")) yBlock.set("prop:order", null);
+      }
+
+      if (block.flavour === "affine:surface") {
+        if (!yBlock.has("prop:elements")) {
+          const elements = new Y.Map();
+          yBlock.set("prop:elements", elements);
+        }
+      }
+
       blocksMap.set(block.id, yBlock);
     }
   });
