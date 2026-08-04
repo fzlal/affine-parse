@@ -18,23 +18,25 @@ export function buildPageYDoc(
       yBlock.set("sys:version", version);
 
       const childrenArr = new Y.Array<string>();
-      childrenArr.insert(0, block.children);
       yBlock.set("sys:children", childrenArr);
+      if (block.children.length > 0) {
+        childrenArr.insert(0, block.children);
+      }
 
       if (block.props.text !== undefined) {
         const text = new Y.Text();
+        yBlock.set("prop:text", text);
         if (typeof block.props.text === "string" && block.props.text) {
           text.insert(0, block.props.text);
         }
-        yBlock.set("prop:text", text);
       }
 
       if (block.props.title !== undefined) {
         const titleText = new Y.Text();
+        yBlock.set("prop:title", titleText);
         if (typeof block.props.title === "string" && block.props.title) {
           titleText.insert(0, String(block.props.title));
         }
-        yBlock.set("prop:title", titleText);
       }
 
       if (block.props.type !== undefined) {
@@ -51,10 +53,10 @@ export function buildPageYDoc(
 
       if (block.props.caption !== undefined) {
         const cap = new Y.Text();
+        yBlock.set("prop:caption", cap);
         if (typeof block.props.caption === "string" && block.props.caption) {
           cap.insert(0, String(block.props.caption));
         }
-        yBlock.set("prop:caption", cap);
       }
 
       if (block.props.sourceId !== undefined) {
@@ -94,12 +96,22 @@ export function buildPageYDoc(
         if (!yBlock.has("prop:xywh")) yBlock.set("prop:xywh", "[0,0,498,92]");
         if (!yBlock.has("prop:index")) yBlock.set("prop:index", "a0");
         if (!yBlock.has("prop:hidden")) yBlock.set("prop:hidden", false);
-        if (!yBlock.has("prop:background")) yBlock.set("prop:background", { dark: "#1E1E1E", light: "#FFFFFF" });
+        if (!yBlock.has("prop:background")) {
+          const bg = new Y.Map();
+          yBlock.set("prop:background", bg);
+          bg.set("dark", "#252525");
+          bg.set("light", "#ffffff");
+        }
         if (!yBlock.has("prop:displayMode")) yBlock.set("prop:displayMode", "both");
         if (!yBlock.has("prop:edgeless")) {
-          yBlock.set("prop:edgeless", {
-            style: { borderRadius: 8, borderSize: 4, borderStyle: "none", shadowType: "--affine-note-shadow-box" },
-          });
+          const edgeless = new Y.Map();
+          yBlock.set("prop:edgeless", edgeless);
+          const style = new Y.Map();
+          edgeless.set("style", style);
+          style.set("borderRadius", 8);
+          style.set("borderSize", 4);
+          style.set("borderStyle", "none");
+          style.set("shadowType", "--affine-note-shadow-box");
         }
       }
 
