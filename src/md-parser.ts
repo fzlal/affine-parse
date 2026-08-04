@@ -300,11 +300,14 @@ export function parseMarkdown(
   noteBlock.children = childIds;
   blocks.unshift(noteBlock);
 
+  const surfaceBlock = createBlock("affine:surface", {});
+
   const pageBlock = createBlock("affine:page", {
     title: docTitle,
   });
-  pageBlock.children = [noteBlock.id];
+  pageBlock.children = [surfaceBlock.id, noteBlock.id];
   blocks.unshift(pageBlock);
+  blocks.splice(1, 0, surfaceBlock);
 
   for (const block of blocks) {
     const src = block.props.sourceId;
