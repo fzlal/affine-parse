@@ -221,11 +221,12 @@ function collectMarkdownFiles(inputDir: string): FileEntry[] {
   return files;
 }
 
-function deriveTitle(filePath: string, inputDir: string): string {
-  const rel = relative(inputDir, filePath);
-  const name = rel.replace(/\.md$/, "").replace(/[/\\]/g, " / ");
-  return name;
+function deriveTitle(filePath: string, _inputDir: string): string {
+  const fileName = filePath.split("/").pop()?.replace(/\.md$/, "") || "Untitled";
+  return fileName;
 }
+
+const SPECIAL_FOLDERS = ["public", "templates", "trash"];
 
 function buildFolderMap(files: FileEntry[]): {
   folders: Map<string, { name: string; parentId: string | null }>;
@@ -237,26 +238,36 @@ function buildFolderMap(files: FileEntry[]): {
   let idx = 0;
 
   for (const file of files) {
-    let currentParent: string | null = null;
+    const isSpecial = SPECIAL_FOLDERS.includes(file.folderParts[0] || "");
 
-    for (let i = 0; i < file.folderParts.length; i++) {
-      const part = file.folderParts[i];
-      const pathKey = file.folderParts.slice(0, i + 1).join("/");
+    if (!isSpecial && file.folderParts.length > 0) {
+      let currentParent: string | null = null;
 
-      if (!folderPaths.has(pathKey)) {
-        const folderId = "folder-" + pathKey.replace(/\//g, "-").replace(/[^a-zA-Z0-9-]/g, "_");
-        folderPaths.set(pathKey, folderId);
-        folders.set(folderId, { name: part, parentId: currentParent });
+      for (let i = 0; i < file.folderParts.length; i++) {
+        const part = file.folderParts[i];
+        const pathKey = file.folderParts.slice(0, i + 1).join("/");
+
+        if (!folderPaths.has(pathKey)) {
+          const folderId = "folder-" + pathKey.replace(/\//g, "-").replace(/[^a-zA-Z0-9-]/g, "_");
+          folderPaths.set(pathKey, folderId);
+          folders.set(folderId, { name: part, parentId: currentParent });
+        }
+
+        currentParent = folderPaths.get(pathKey)!;
       }
 
-      currentParent = folderPaths.get(pathKey)!;
+      docLinks.push({
+        parentId: currentParent,
+        docId: "",
+        index: "a" + String(idx++).padStart(6, "0"),
+      });
+    } else {
+      docLinks.push({
+        parentId: null,
+        docId: "",
+        index: "a" + String(idx++).padStart(6, "0"),
+      });
     }
-
-    docLinks.push({
-      parentId: currentParent,
-      docId: "", // will be set later
-      index: "a" + String(idx++).padStart(6, "0"),
-    });
   }
 
   return { folders, docLinks };
