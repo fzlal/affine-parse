@@ -112,10 +112,7 @@ export function buildPageYDoc(
       }
 
       if (block.flavour === "affine:surface") {
-        if (!yBlock.has("prop:elements")) {
-          const elements = new Y.Map();
-          yBlock.set("prop:elements", elements);
-        }
+        // elements is Boxed<Y.Map> in BlockSuite - skip setting it, let AFFiNE use default
       }
 
       blocksMap.set(block.id, yBlock);
