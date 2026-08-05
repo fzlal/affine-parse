@@ -130,7 +130,17 @@ export function buildPageYDoc(
       if (!yBlock.has("prop:order")) yBlock.set("prop:order", null);
     }
 
-    blocksMap.set(block.id, yBlock);
+      if (block.flavour === "affine:surface") {
+        if (!yBlock.has("prop:elements")) {
+          const boxed = new Y.Map();
+          yBlock.set("prop:elements", boxed);
+          boxed.set("type", "$blocksuite:internal:native$");
+          const innerMap = new Y.Map();
+          boxed.set("value", innerMap);
+        }
+      }
+
+      blocksMap.set(block.id, yBlock);
   }
 
   const binary = Y.encodeStateAsUpdate(doc);
