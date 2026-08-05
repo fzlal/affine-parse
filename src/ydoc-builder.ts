@@ -14,8 +14,8 @@ export function buildPageYDoc(
   pageId: string,
   title: string,
   blocks: AffineBlockDef[]
-): { binary: Uint8Array; subdoc: Y.Doc } {
-  const doc = new Y.Doc({ guid: pageId });
+): Uint8Array {
+  const doc = new Y.Doc();
   const blocksMap = doc.getMap("blocks");
 
   for (const block of blocks) {
@@ -134,14 +134,14 @@ export function buildPageYDoc(
   }
 
   const binary = Y.encodeStateAsUpdate(doc);
-  return { binary, subdoc: doc };
+  doc.destroy();
+  return binary;
 }
 
 export interface PageEntry {
   id: string;
   title: string;
   trash?: boolean;
-  subdoc?: Y.Doc;
 }
 
 export function buildRootYDoc(
@@ -171,9 +171,9 @@ export function buildRootYDoc(
 
   const spaces = doc.getMap("spaces");
   for (const page of pages) {
-    if (page.subdoc) {
-      spaces.set(page.id, page.subdoc);
-    }
+    const subDoc = new Y.Doc({ guid: page.id });
+    spaces.set(page.id, subDoc);
+    subDoc.destroy();
   }
 
   const binary = Y.encodeStateAsUpdate(doc);
