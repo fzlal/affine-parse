@@ -20,6 +20,8 @@ export function buildPageYDoc(
 
   for (const block of blocks) {
     const yBlock = new Y.Map<any>();
+    blocksMap.set(block.id, yBlock);
+
     yBlock.set("sys:id", block.id);
     yBlock.set("sys:flavour", block.flavour);
     const version = block.flavour === "affine:page" ? 2 : 1;
@@ -130,17 +132,15 @@ export function buildPageYDoc(
       if (!yBlock.has("prop:order")) yBlock.set("prop:order", null);
     }
 
-      if (block.flavour === "affine:surface") {
-        if (!yBlock.has("prop:elements")) {
-          const boxed = new Y.Map();
-          yBlock.set("prop:elements", boxed);
-          boxed.set("type", "$blocksuite:internal:native$");
-          const innerMap = new Y.Map();
-          boxed.set("value", innerMap);
-        }
+    if (block.flavour === "affine:surface") {
+      if (!yBlock.has("prop:elements")) {
+        const boxed = new Y.Map();
+        yBlock.set("prop:elements", boxed);
+        boxed.set("type", "$blocksuite:internal:native$");
+        const innerMap = new Y.Map();
+        boxed.set("value", innerMap);
       }
-
-      blocksMap.set(block.id, yBlock);
+    }
   }
 
   const binary = Y.encodeStateAsUpdate(doc);
