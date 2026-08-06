@@ -222,14 +222,17 @@ export function buildFoldersFromStructure(
 }
 
 export function buildDocPropertiesDoc(
-  properties: { id: string; isTemplate?: boolean }[]
+  pages: { id: string; isTemplate?: boolean }[]
 ): Uint8Array {
   const doc = new Y.Doc();
 
-  for (const prop of properties) {
-    const yProp = doc.getMap(prop.id);
-    yProp.set("id", prop.id);
-    if (prop.isTemplate) yProp.set("isTemplate", true);
+  for (const page of pages) {
+    const yProp = doc.getMap(page.id);
+    yProp.set("id", page.id);
+    yProp.set("primaryMode", "page");
+    yProp.set("edgelessColorTheme", "dark");
+    yProp.set("createdBy", "");
+    if (page.isTemplate) yProp.set("isTemplate", true);
   }
 
   const binary = Y.encodeStateAsUpdate(doc);

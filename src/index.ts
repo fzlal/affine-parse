@@ -352,9 +352,13 @@ async function cmdImport(args: string[]) {
   insertSnapshot(db, "db$folders", foldersBinary);
   insertUpdate(db, "db$folders", foldersBinary);
 
-  if (properties.length > 0) {
+  if (true) {
     console.log("Creating doc properties...");
-    const propsBinary = buildDocPropertiesDoc(properties);
+    const allPages = pages.map(p => ({
+      id: p.id,
+      isTemplate: mdFiles.find((f, i) => docLinks[i]?.docId === p.id)?.folderParts[0] === "templates",
+    }));
+    const propsBinary = buildDocPropertiesDoc(allPages);
     insertSnapshot(db, "db$docProperties", propsBinary);
     insertUpdate(db, "db$docProperties", propsBinary);
   }
