@@ -18,6 +18,7 @@ import {
   setMeta,
   insertSnapshot,
   insertUpdate,
+  insertClock,
   vacuumDb,
 } from "./sqlite-schema";
 import { parseMarkdown } from "./md-parser";
@@ -325,6 +326,7 @@ async function cmdImport(args: string[]) {
 
     insertSnapshot(db, pageId, pageBinary);
     insertUpdate(db, pageId, pageBinary);
+    insertClock(db, pageId);
 
     const isTrash = mdFile.folderParts[0] === "trash";
     const isTemplate = mdFile.folderParts[0] === "templates";
@@ -346,6 +348,7 @@ async function cmdImport(args: string[]) {
   const rootBinary = buildRootYDoc(workspaceName, pages);
   insertSnapshot(db, workspaceId, rootBinary);
   insertUpdate(db, workspaceId, rootBinary);
+  insertClock(db, workspaceId);
 
   console.log("Creating folders...");
   const foldersBinary = buildFoldersFromStructure(folders, docLinks);

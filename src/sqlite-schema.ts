@@ -156,6 +156,18 @@ export function insertUpdate(
   ]);
 }
 
+export function insertClock(
+  db: Database,
+  docId: string,
+  timestamp?: string
+): void {
+  const ts = timestamp || new Date().toISOString();
+  db.run("INSERT OR REPLACE INTO clocks (doc_id, timestamp) VALUES (?, ?)", [
+    docId,
+    ts,
+  ]);
+}
+
 export function insertBlob(
   db: Database,
   key: string,
